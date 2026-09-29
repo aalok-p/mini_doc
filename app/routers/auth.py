@@ -6,8 +6,8 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import UserSignup, Token, UserResponse
-from app.utils.auth import get_password_hash, verify_password, create_access_token
-from app.dependencies.auth import get_current_user
+from app.utils.auth import get_pass_hash, verify_pass, create_accesstoken
+from app.dependencies.auth import get_curr_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -21,7 +21,7 @@ async def signup(payload: UserSignup, db: AsyncSession = Depends(get_db)):
 
     user = User(
         email=payload.email,
-        hashed_password=get_password_hash(payload.password),
+        hashed_password=get_pass_hash(payload.password),
         full_name=payload.full_name,
         phone=payload.phone,
     )
@@ -35,13 +35,13 @@ async def signup(payload: UserSignup, db: AsyncSession = Depends(get_db)):
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_pass(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = create_accesstoken(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: User = Depends(get_current_user)):
+async def me(current_user: User = Depends(get_curr_user)):
     return current_user
