@@ -4,6 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models.booking import Booking
@@ -13,8 +14,6 @@ from app.schemas.booking import BookingCreate, BookingResponse
 from app.dependencies.auth import get_curr_user
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
-
-
 @router.post("", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     payload: BookingCreate,
@@ -43,10 +42,13 @@ async def create_booking(
         status="PENDING",
     )
     db.add(booking)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="This slot is already booked")
     await db.refresh(booking)
     return booking
-
 
 @router.get("", response_model=list[BookingResponse])
 async def list_bookings(
@@ -57,7 +59,6 @@ async def list_bookings(
         select(Booking).where(Booking.user_id == current_user.id)
     )
     return result.scalars().all()
-
 
 @router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
@@ -72,7 +73,6 @@ async def get_booking(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     return booking
-
 
 @router.patch("/{booking_id}/cancel", response_model=BookingResponse)
 async def cancel_booking(

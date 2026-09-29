@@ -1,8 +1,7 @@
+import uuid
 from datetime import datetime
 from decimal import Decimal
-
 from pydantic import BaseModel, ConfigDict
-
 
 class BookingCreate(BaseModel):
     test_id: str
@@ -13,10 +12,10 @@ class BookingCreate(BaseModel):
 class BookingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    user_id: str
-    test_id: str
-    centre_id: str
+    id: uuid.UUID
+    user_id: uuid.UUID
+    test_id: uuid.UUID
+    centre_id: uuid.UUID
     appointment_datetime: datetime
     amount: Decimal
     status: str
